@@ -3,6 +3,8 @@
 Turns Clippy's (jailbroken Echo Show 5) camera into a security camera on Mainframe:
 live view in Home Assistant, plus continuous recording to S.H.O.D.A.N with a 25 GB ring buffer.
 
+The camera side, the Echo app that encodes and serves the stream (and the laptop webcam that also reads it through this hub), is [EchoCameraStreamer](https://github.com/HackOverflow404/EchoCameraStreamer).
+
 ```
 Echo (EchoCameraStreamer, ECH0 over ADB)
   └─ secur-t-hub      owns the single Echo connection, fans it out on localhost
@@ -45,9 +47,9 @@ Home dashboard and recreates the `homeassistant` container with the recordings m
 container definition, keeps the old container as `homeassistant-old-<timestamp>`, and prints a rollback command.
 
 Status and controls (Recording switch, Restart camera, storage, footage kept, frame rate) come
-from mainframe-bridge, which reads `/run/secur-t-hub/status.json` and `/run/secur-t-recorder/status.json`
+from mainframe-bridge (a private repo), which reads `/run/secur-t-hub/status.json` and `/run/secur-t-recorder/status.json`
 (written every 5 s; the recorder's survives while it's stopped). The Clippy page's Camera section
-and the Home SECUR-T section live in mainframe-bridge's `dashboard.py`.
+and the Home SECUR-T section live in mainframe-bridge's `dashboard.py` (private).
 
 ## Checks
 
