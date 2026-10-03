@@ -1,0 +1,17 @@
+[Unit]
+Description=SECUR-T recorder (25 GB ring buffer on SHODAN)
+After=secur-t-go2rtc.service
+Wants=secur-t-go2rtc.service
+RequiresMountsFor=/mnt/shodan
+
+[Service]
+User=user
+RuntimeDirectory=secur-t-recorder
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/bin/python3 -u /opt/secur-t/recorder.py --dir /mnt/shodan/Security/Clippy --cap-gb 25 --segment-seconds 600
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

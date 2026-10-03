@@ -1,0 +1,13 @@
+[Unit]
+Description=go2rtc RTSP server for SECUR-T
+After=secur-t-hub.service
+Wants=secur-t-hub.service
+
+[Service]
+User=user
+ExecStart=/usr/local/bin/go2rtc -config /opt/secur-t/go2rtc.yaml
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

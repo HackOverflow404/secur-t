@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# One-time Home Assistant changes on Mainframe (run from the laptop):
+#  - backs up the container definition and the Home dashboard
+#  - adds the SECUR-T camera section to the Home dashboard (HA must be stopped while editing .storage)
+#  - recreates the homeassistant container with the same settings plus
+#    /mnt/shodan/Security/Clippy mounted read-only at /media/Clippy (Media browser → My media → Clippy)
+# The old container is kept as homeassistant-old-<timestamp>; remove it once everything checks out.
+set -euo pipefail
+cd -- "$(dirname -- "$0")"
+HOST=${HOST:-mainframe}
+scp -q add_camera_section.py "$HOST":/tmp/add_camera_section.py
+ssh "$HOST" bash -s <<'REMOTE'
+set -euo pipefail
+ts=$(date +%Y%m%d-%H%M%S); S=~/homeassistant/.storage
+docker inspect homeassistant > ~/homeassistant-container-$ts.json
+docker stop -t 60 homeassistant
+cp -p $S/lovelace.home_mobile $S/lovelace.home_mobile.$ts.bak
+sudo python3 /tmp/add_camera_section.py $S/lovelace.home_mobile  # .storage files are root-owned (container runs as root)
+docker rename homeassistant homeassistant-old-$ts
+docker run -d --name homeassistant --restart unless-stopped --network host -e TZ=America/Chicago \
+  -v /home/user/homeassistant:/config \
+  -v /mnt/shodan/Security/Clippy:/media/Clippy:ro \
+  ghcr.io/home-assistant/home-assistant:stable >/dev/null
+rm -f /tmp/add_camera_section.py
+echo "HA recreated. Old container: homeassistant-old-$ts (docker rm it when happy)."
+echo "Rollback: docker rm -f homeassistant && docker rename homeassistant-old-$ts homeassistant && cp -p $S/lovelace.home_mobile.$ts.bak $S/lovelace.home_mobile && docker start homeassistant"
+REMOTE

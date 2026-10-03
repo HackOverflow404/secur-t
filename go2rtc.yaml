@@ -1,0 +1,13 @@
+# go2rtc for SECUR-T (Clippy's camera). Everything listens on localhost only:
+# Home Assistant (host networking) and the recorder reach it on 127.0.0.1;
+# remote viewing goes through Home Assistant.
+api:
+  listen: "127.0.0.1:1984"
+rtsp:
+  listen: "127.0.0.1:8554"
+webrtc:
+  listen: ""
+log:
+  level: info
+streams:
+  clippy: tcp://127.0.0.1:7002

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Removes SECUR-T from Mainframe. Recordings on SHODAN and the ffmpeg package are kept.
+set -euo pipefail
+HOST=${HOST:-mainframe}
+ssh "$HOST" bash -s <<'REMOTE'
+set -euo pipefail
+SERVICES="secur-t-hub secur-t-go2rtc secur-t-recorder"
+sudo systemctl disable --now $SERVICES 2>/dev/null || true
+for s in $SERVICES; do sudo rm -f "/etc/systemd/system/$s.service"; done
+sudo systemctl daemon-reload
+sudo rm -rf /opt/secur-t /usr/local/bin/go2rtc
+echo "Removed. Recordings left in /mnt/shodan/Security/Clippy."
+REMOTE

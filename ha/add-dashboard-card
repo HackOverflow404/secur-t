@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Adds the SECUR-T section to the Home dashboard. HA overwrites .storage while running,
+# so it is stopped for the edit (~1 min of downtime). Backs up the dashboard first.
+set -euo pipefail
+cd -- "$(dirname -- "$0")"
+HOST=${HOST:-mainframe}
+scp -q add_camera_section.py "$HOST":/tmp/add_camera_section.py
+ssh "$HOST" bash -s <<'REMOTE'
+set -euo pipefail
+ts=$(date +%Y%m%d-%H%M%S); F=~/homeassistant/.storage/lovelace.home_mobile
+sudo cp -p $F $F.$ts.bak
+docker stop -t 60 homeassistant >/dev/null
+trap 'docker start homeassistant >/dev/null; rm -f /tmp/add_camera_section.py' EXIT
+sudo python3 /tmp/add_camera_section.py $F
+echo "Done. Backup: $F.$ts.bak"
+REMOTE

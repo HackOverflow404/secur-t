@@ -1,0 +1,13 @@
+[Unit]
+Description=SECUR-T hub (shares the Echo Show camera stream)
+After=network.target
+
+[Service]
+User=user
+RuntimeDirectory=secur-t-hub
+ExecStart=/usr/bin/python3 -u /opt/secur-t/hub.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

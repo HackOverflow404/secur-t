@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Installs SECUR-T on Mainframe (run from this laptop).
+#   Mainframe: /opt/secur-t/, /etc/systemd/system/secur-t-{hub,go2rtc,recorder}.service,
+#              /usr/local/bin/go2rtc, and the Debian ffmpeg package.
+set -euo pipefail
+cd -- "$(dirname -- "$0")"
+HOST=${HOST:-mainframe}
+GO2RTC_VERSION=${GO2RTC_VERSION:-v1.9.14}
+SERVICES="secur-t-hub secur-t-go2rtc secur-t-recorder"
+
+ssh "$HOST" 'rm -rf /tmp/secur-t && mkdir -p /tmp/secur-t/systemd'
+scp -q hub.py recorder.py go2rtc.yaml "$HOST":/tmp/secur-t/
+scp -q systemd/*.service "$HOST":/tmp/secur-t/systemd/
+ssh "$HOST" GO2RTC_VERSION="$GO2RTC_VERSION" SERVICES="'$SERVICES'" bash -s <<'REMOTE'
+set -euo pipefail
+command -v ffmpeg >/dev/null || sudo apt-get install -y --no-install-recommends ffmpeg
+if ! /usr/local/bin/go2rtc -version 2>/dev/null | grep -q "${GO2RTC_VERSION#v}"; then
+    curl -fsSL -o /tmp/secur-t/go2rtc "https://github.com/AlexxIT/go2rtc/releases/download/$GO2RTC_VERSION/go2rtc_linux_arm64"
+    sudo install -m 755 /tmp/secur-t/go2rtc /usr/local/bin/go2rtc
+fi
+sudo install -d /opt/secur-t
+sudo install -m 644 /tmp/secur-t/hub.py /tmp/secur-t/recorder.py /tmp/secur-t/go2rtc.yaml /opt/secur-t/
+sudo install -m 644 /tmp/secur-t/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable $SERVICES
+sudo systemctl restart $SERVICES
+rm -rf /tmp/secur-t
+systemctl --no-pager --lines=0 status $SERVICES | grep -E '^●|Active:'
+REMOTE
