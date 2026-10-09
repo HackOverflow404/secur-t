@@ -24,6 +24,9 @@ CONFIG, KEY, EOS = 2, 1, 4
 MAX_PAYLOAD = 16 * 1024 * 1024
 HEADER = struct.pack('>4s5I', b'ECH0', 1, 1280, 720, 25, 1000000)
 PACKAGE = 'com.echo.camerastreamer'
+# Seconds to let EchoCameraStreamer's accessibility keeper restart a killed service before
+# falling back to launching its Activity (which briefly takes over the Echo's screen).
+KEEPER_GRACE = 20
 QUEUE_LIMIT = 90  # ~4 s of video; a client further behind than this is resynced at a keyframe
 STATUS = '/run/secur-t-hub/status.json'  # read by mainframe-bridge for Home Assistant
 
@@ -154,6 +157,10 @@ class Hub:
             raise ConnectionError('cannot query Echo over ADB: ' + (check.stderr.strip() or f'adb exited {check.returncode}'))
         return '.StreamService' in check.stdout
 
+    def keeper_enabled(self):
+        enabled = self.adb('shell', 'settings', 'get', 'secure', 'enabled_accessibility_services').stdout
+        return f'{PACKAGE}/.KeeperService' in enabled or f'{PACKAGE}/{PACKAGE}.KeeperService' in enabled
+
     def resumed_activity(self):
         for line in self.adb('shell', 'dumpsys', 'activity', 'activities').stdout.splitlines():
             if 'mResumedActivity' in line:
@@ -172,6 +179,16 @@ class Hub:
             time.sleep(3)
         if self.service_running():
             return
+        if self.keeper_enabled():
+            # The app's accessibility keeper restarts the service from the background once Android
+            # rebinds it (1-16 s restart backoff); only fall back to the Activity if it doesn't.
+            deadline = time.monotonic() + KEEPER_GRACE
+            while time.monotonic() < deadline:
+                time.sleep(1)
+                if self.service_running():
+                    log('Echo camera service restarted by its keeper')
+                    return
+            log(f'Keeper did not restart the service within {KEEPER_GRACE} s')
         previous = self.resumed_activity()
         log(f'Echo camera service not running; autostarting (foreground was {previous})')
         launch = self.adb('shell', 'am', 'start', '-n', f'{PACKAGE}/.MainActivity', '--ez', 'autostart', 'true')

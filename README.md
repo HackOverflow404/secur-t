@@ -15,7 +15,9 @@ Echo (EchoCameraStreamer, ECH0 over ADB)
 ```
 
 - **Hub** (`hub.py`): EchoCameraStreamer only serves one client, so the hub is now the only thing
-  that talks to the Echo. It autostarts the Echo service when needed (same logic as the receiver),
+  that talks to the Echo. It autostarts the Echo service when needed. It first gives the app's
+  accessibility keeper up to 20 s (`KEEPER_GRACE`) to restart it from the background, and only
+  falls back to launching MainActivity, which briefly takes over the screen, if that fails. It also
   replays SPS/PPS to new clients and inlines them before every IDR on the Annex-B port (the Echo
   only sends them once per encoder session; go2rtc snapshots need them per keyframe).
 - **go2rtc**: static binary in `/usr/local/bin`, localhost only. Remote viewing goes through HA.
